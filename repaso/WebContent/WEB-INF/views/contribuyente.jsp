@@ -12,24 +12,12 @@
 
 <table>
 	<tr>
-		<th>
-			id contribuyente
-		</th>
-		<th>
-			nombre importancia
-		</th>
-		<th>
-			nombre
-		</th>
-		<th>
-			apellido
-		</th>
-		<th>
-			nit
-		</th>
-		<th>
-			fecha de ingreso
-		</th>
+		<th>id contribuyente</th>
+		<th>nombre importancia</th>
+		<th>nombre</th>
+		<th>apellido</th>
+		<th>nit</th>
+		<th>fecha de ingreso</th>
 	</tr>
 	<c:forEach items="${c}" var="c">
 	<tr>
