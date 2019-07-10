@@ -1,0 +1,152 @@
+paso a seguir en capas:
+(en teoría me darán cascarón con pomp, con todas sus dependencias)
+//-------si hay un campo date al crear la tabla hacerlo así:
+ALTER TABLE contribuyente add column f_fecha_nacimiento date default CURRENT_DATE
+1-crear carpeta "views" dentro de WEB-INF, y las jsp necesarias
+	Si no están, agregar:
+	<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+	<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+2-crear los domain
+	--Agregar fuera la clase:
+	@Entity
+	@Table(schema="public", name="nombreTabla")
+	--Dentro de la clase crear los atributos con nombre en camelCase
+	private tipoDeVariable nombreVariable 
+	--La llave primaria llevará las siguientes anotaciones
+	@Id
+	@GeneratedValue(generator="actores_id_actores_seq",strategy = GenerationType.AUTO)
+	@SequenceGenerator(name="actor_id_actor_seq",sequenceName="public.actor_id_actor_seq",allocationSize = 1)
+	@Column(name="nombreColumna")//En la tabla de postgress
+	--El resto de atributos propios a la tabla solo llevarán column
+	--Si la tabla posee la pk de la otra entidad acá en vez de column
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "c_importancia")//Es el nombre de la columna en la base de postgress
+	private Importancia relacion;
+	--entonces creo genero los métodos setters, getters, y constructores y quizá delegate (investigar después)
+--Sí es la tabla OnToMany
+	--repito los pasos anteriores más un campo que será @OnToMany
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "relacion")
+	private List<Contribuyente> contribuyentes;
+
+3-crear respositorios (son interfaces)
+	--Revisar que se haya implementado @EnableJpaRepositories(basePackages = "com.uca.capas.repositories")
+	--de la siguiente manera: NombreEntidadRepository
+	--extiende JpaRepository<NombreEntidad, Integer>
+	--creo los métodos, generalmente acá solo búsquedas o querys hechas por mí
+	public valorDeRetorno findAll() ó findBy //nombre idéntico al atributo de la entidad iniciando con
+mayúsculas
+4-crear las interfaces service
+	--Repetir el paso 3 sin extender de JpaRepository
+	--creo todos los métodos que cree en repositories
+5-creo la implementación de los servicios
+	--Implemento la interfaz de servicio
+	--Acá hago un @Autowired del repositorio que necesito
+	--Implemento los métodos y a cualquier insert/update/delete le aplico @Transactional
+6-creo los controlladores
+	--Agrego fuera de la clase la anotación @Controller
+	--Hago un @Autowired de mis servicios
+	--crearé los métodos públicos que retornan un ModelAndView
+	--Arriba de ellos la anotación de @RequestMapping()<-- dentro de
+los paréntis puede ir: "/nombreRuta" ó <<value="/nombreRuta">>, method= RequestMethod.POST
+	--Luego, si mi método que retorna un ModelAndView recibe parámetros será con @RequestParam Ej:
+@RequestMapping(value="/guardar", method = RequestMethod.POST)
+	public ModelAndView guardar(
+			@RequestParam(name = "opciones") Integer opciones, @RequestParam(name="nombre") String nombre, 
+			@RequestParam(name="apellido") String apellido,
+			@RequestParam(name="nit") String nit) {//Deben ser igual al name del input de la jsp
+		ModelAndView mav = new ModelAndView();
+		//List<Importancia> i = null;
+		//i = importanciaService.findAll();
+		contribuyenteService.insert(opciones, nombre, apellido, nit);
+		//mav.addObject("c", i);
+		mav.setViewName("redirect:/");
+		return mav;
+	}
+	--O si recibe una entidad completa lo hago siempre con form y en vez de recibir parámetros
+será utilizan el @ModelAtrribute, EJ:
+	@RequestMapping("/")
+	public ModelAndView inicio(
+			@ModelAttribute("contribuyente") Contribuyente c ) {
+		ModelAndView mav = new ModelAndView();
+		List<Importancia> i = null;
+		i = importanciaService.findAll();
+		
+		mav.addObject("c", i);
+		mav.setViewName("importancia");
+		return mav;
+	}
+/******** ejemplo de insert manual:
+@Modifying(clearAutomatically = true)
+@Query(value="insert into public.contribuyente(c_importancia, s_nombre, s_apellido, s_nit) values (:opciones, :nombre, :apellido, :nit)", nativeQuery = true)
+public int insert(@Param("opciones") Integer opciones, @Param("nombre") String nombre,
+	@Param("apellido") String apellido, @Param("nit") String nit);
+	
+/****** ejemplo de jsp
+<form method="POST" action="${pageContext.request.contextPath}/guardar">
+	<select name="opciones">
+	<c:forEach items="${c}" var="c">
+		<option value="${c.cImportancia}" label="${c.sImportancia}"/>
+	</c:forEach>
+	</select>
+	<input type="text" name="nombre" placeholder="Ingrese el nombre"/>
+	<input type="text" name="apellido" placeholder="Ingrese el apellido"/>
+	<input type="text" name="nit" placeholder="Ingrese el nit"/>
+	<input type="submit" value="guardar">
+	<button type="button" onclick="location.href='${pageContext.request.contextPath}/verCon'">Ver contribuyentes</button>
+</form>
+
+/****** otro ej:
+	<h1>Tabla de sucursal correspondiente</h1>
+
+<table>
+		<tr>
+			<th> ID sucursal </th>
+			<th> Nombre de sucursal </th>
+			<th> Ubicación </th>
+			<th> horario de apertura </th>
+			<th> horario de cierre </th>
+			<th> número de mesas </th>
+			<th> nombre del gerente </th>
+		</tr>
+			<tr> 
+			<!-- mando a llamar los nombres que le puse en domain, para llenar esos campos... -->
+				<td> ${DatosSucursal.codigoSucursal} </td>
+				<td> ${DatosSucursal.nombreSucursal} </td>
+				<td> ${DatosSucursal.ubicacionSucursal} </td>
+				<td> ${DatosSucursal.horarioApertura} </td>
+				<td> ${DatosSucursal.horarioCierre} </td>
+				<td> ${DatosSucursal.numeroMesas} </td>
+				<td> ${DatosSucursal.nombreGerente} </td>
+			</tr>
+</table>
+		<br>
+		<h2>Empleados de la sucursal correspondiente:</h2>
+		
+		<label>Agregar nuevo empleado</label>
+	<button onclick="location.href='${pageContext.request.contextPath}/insertEmp?codigo_sucursal=${DatosSucursal.codigoSucursal}'">Nuevo empleado</button> <br> 
+		
+		<table>
+				<tr>
+			<th> ID empleado </th>
+			<th> Nombre de empleado </th>
+			<th> Edad de empleado </th>
+			<th> Género de empleado </th>
+			<th> Estado de empleado </th>
+			<!-- el campo de id sucursal correspondiente no será necesario, a menos que desee mostrar la 
+			relación directa entre el empleado y la sucursal en una misma tabla, me tocará realizar una clase DTO -->
+		</tr>
+		<c:forEach items="${DatosEmpleado}" var="DatosEmpleado">
+			<tr> 
+			<!-- mando a llamar los nombres que le puse en domain, para llenar esos campos... -->
+				<td> ${DatosEmpleado.idEmpleado} </td>
+				<td> ${DatosEmpleado.nombreEmpleado} </td>
+				<td> ${DatosEmpleado.edadEmpleado} </td>
+				<td> ${DatosEmpleado.generoEmpleado} </td>
+				<td> ${DatosEmpleado.estadoEmpleado} </td>
+				<td> <button onClick = "location.href='${pageContext.request.contextPath}/ElimEmp?codigo_empleado=${DatosEmpleado.idEmpleado}&codigo_sucursal=${DatosSucursal.codigoSucursal}'"
+				> Eliminar Empleado</button> </td>
+				<td> <button onclick = "location.href='${pageContext.request.contextPath}/EditarEmp?codigo_empleado=${DatosEmpleado.idEmpleado}&codigo_sucursal=${DatosSucursal.codigoSucursal}'" 
+				>Editar Empleado</button> </td>
+			</tr>
+		</c:forEach>
+</table>
